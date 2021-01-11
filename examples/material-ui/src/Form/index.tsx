@@ -1,27 +1,60 @@
-import React from 'react';
+import React, { useCallback } from 'react';
+
+import * as Yup from 'yup';
 
 import { Button, Grid, CircularProgress, MenuItem } from '@material-ui/core';
-import { FormHandles } from '@unform/core';
+import { SubmitHandler, FormHandles } from '@unform/core';
 import { Form } from '@unform/web';
 
 import { TextField, Select } from '../../../../packages/material-ui/lib';
 import { useRandomPerson } from './useRandomPerson';
 
-const FormWrapper = () => {
+const FormWrapper: React.FC = () => {
   const formRef = React.useRef<FormHandles>(null);
   const { loading, loadNewPerson } = useRandomPerson();
   const [data, setData] = React.useState({});
 
-  const loadData = React.useCallback(async () => {
+  const loadData = useCallback(async () => {
     const person = await loadNewPerson();
     formRef.current?.setData({ ...person, yesno: 1, truefalse: true });
   }, [loadNewPerson]);
+
+  const handleSubmit = useCallback<SubmitHandler>(async formData => {
+    try {
+      setData(formData);
+
+      const schema = Yup.object().shape({
+        name: Yup.object().shape({
+          first: Yup.string().required('Required'),
+          last: Yup.string().required('Required'),
+        }),
+        email: Yup.string()
+          .email('Invalid email')
+          .required('Required'),
+        gender: Yup.string().required('Required'),
+        yesno: Yup.string().required('Required'),
+        truefalse: Yup.string().required('Required'),
+      });
+
+      await schema.validate(formData, { abortEarly: false });
+    } catch (error) {
+      if (error instanceof Yup.ValidationError) {
+        const errors = {};
+
+        error.inner.forEach(err => {
+          if (err.path) errors[err.path] = err.message;
+        });
+
+        formRef.current?.setErrors(errors);
+      }
+    }
+  }, []);
 
   return (
     <>
       <Form
         ref={formRef}
-        onSubmit={formdata => setData(formdata)}
+        onSubmit={handleSubmit}
         initialData={{
           email: 'foo@bar.com',
         }}
@@ -37,7 +70,12 @@ const FormWrapper = () => {
             />
           </Grid>
           <Grid item xs={6}>
-            <TextField fullWidth name="name.last" label="Last Name" />
+            <TextField
+              fullWidth
+              name="name.last"
+              label="Last Name"
+              clearErrorOnFocus={false}
+            />
           </Grid>
           <Grid item xs={6}>
             <TextField fullWidth name="email" label="E-mail" />
@@ -65,6 +103,7 @@ const FormWrapper = () => {
               label="true or false?"
               variant="outlined"
               fullWidth
+              clearErrorOnFocus={false}
             >
               <MenuItem value={false}>False</MenuItem>
               <MenuItem value>True</MenuItem>
