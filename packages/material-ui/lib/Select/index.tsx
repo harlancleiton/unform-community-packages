@@ -15,7 +15,7 @@ import {
 import { useField } from '@unform/core';
 
 import { printWarning } from '../debug';
-import { SelectProps } from './types';
+import { SelectFocusHandler, SelectProps } from './types';
 
 function getOptionsCollectionArray(
   options: HTMLOptionsCollection,
@@ -43,6 +43,8 @@ const Select: React.FC<SelectProps> = ({
   value: valueProp,
   multiple,
   variant,
+  onFocus,
+  clearErrorOnFocus = true,
   ...restProps
 }) => {
   if (!name) {
@@ -55,6 +57,7 @@ const Select: React.FC<SelectProps> = ({
     fieldName,
     registerField,
     defaultValue: defaultFieldValue,
+    clearError,
     error,
   } = useField(name);
 
@@ -151,6 +154,15 @@ const Select: React.FC<SelectProps> = ({
     return isValidValue(valueProp as any) || !!isValidValue(inputValue);
   }, [native, multiple, inputValue, valueProp]);
 
+  const handleOnFocus = useCallback<SelectFocusHandler>(
+    event => {
+      if (clearErrorOnFocus) clearError();
+
+      if (onFocus) onFocus(event);
+    },
+    [clearError, clearErrorOnFocus, onFocus],
+  );
+
   return (
     <FormControl
       style={{ minWidth: 200, ...style }}
@@ -164,7 +176,7 @@ const Select: React.FC<SelectProps> = ({
         </InputLabel>
       )}
 
-      <BaseSelect {...baseSelectProps} native={native}>
+      <BaseSelect {...baseSelectProps} native={native} onFocus={handleOnFocus}>
         {children}
       </BaseSelect>
 

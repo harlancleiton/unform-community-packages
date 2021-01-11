@@ -1,16 +1,18 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 import { TextField as BaseTextField } from '@material-ui/core';
 import { useField } from '@unform/core';
 
 import { printWarning } from '../debug';
-import { TextFieldProps } from './types';
+import { TextFieldProps, TextFieldFocusHandler } from './types';
 
 const TextField: React.FC<TextFieldProps> = ({
   name,
   helperText,
   defaultValue,
   InputLabelProps,
+  onFocus,
+  clearErrorOnFocus = true,
   ...restProps
 }) => {
   if (!name) {
@@ -24,6 +26,7 @@ const TextField: React.FC<TextFieldProps> = ({
     fieldName,
     defaultValue: defaultFieldValue,
     registerField,
+    clearError,
     error,
   } = useField(name);
   const defaultInputValue = defaultValue ?? defaultFieldValue;
@@ -77,6 +80,15 @@ const TextField: React.FC<TextFieldProps> = ({
     };
   }, [inputRef]);
 
+  const handleOnFocus = useCallback<TextFieldFocusHandler>(
+    event => {
+      if (clearErrorOnFocus) clearError();
+
+      if (onFocus) onFocus(event);
+    },
+    [clearError, clearErrorOnFocus, onFocus],
+  );
+
   return (
     <BaseTextField
       {...restProps}
@@ -85,6 +97,7 @@ const TextField: React.FC<TextFieldProps> = ({
       helperText={error || helperText}
       inputRef={inputRef}
       defaultValue={defaultInputValue}
+      onFocus={handleOnFocus}
       InputLabelProps={{
         ...InputLabelProps,
         shrink: InputLabelProps?.shrink ?? shrink,
